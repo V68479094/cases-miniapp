@@ -41,13 +41,6 @@ body {
     display: block;
 }
 
-#case-open {
-    display: none;
-}
-
-#case-open.active {
-    display: flex;
-}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
