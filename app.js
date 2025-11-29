@@ -13,13 +13,38 @@ var CASES = {
 };
 
 // Состояние
-var userBalance = 100;
+var userBalance = 0;
 var currentCase = null;
 var isOpening = false;
 
 // Запуск
 window.onload = function() {
     console.log('App loaded!');
+    
+    // Получаем баланс из URL параметров (от бота)
+    try {
+        var urlParams = new URLSearchParams(window.location.search);
+        var startParam = urlParams.get('start_param');
+        if (startParam) {
+            var params = JSON.parse(atob(startParam));
+            userBalance = params.balance || 0;
+            console.log('Balance from bot:', userBalance);
+        }
+    } catch (e) {
+        console.log('Error parsing params:', e);
+    }
+    
+    // Убеждаемся что показывается меню кейсов
+    var menu = document.getElementById('cases-menu');
+    var openScreen = document.getElementById('case-open');
+    if (menu) {
+        menu.style.display = 'block';
+        menu.classList.add('active');
+    }
+    if (openScreen) {
+        openScreen.style.display = 'none';
+        openScreen.classList.remove('active');
+    }
     
     // Привязываем клики к карточкам
     var cards = document.querySelectorAll('.case-card');
