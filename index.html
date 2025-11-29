@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Кейсы</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Главное меню кейсов -->
+        <div id="cases-menu" class="screen active">
+            <div class="header">
+                <h1>📦 КЕЙСЫ</h1>
+                <div class="balance">
+                    <span class="balance-label">Баланс:</span>
+                    <span id="user-balance" class="balance-value">0.00 ⭐</span>
+                </div>
+            </div>
+            
+            <div class="cases-grid">
+                <div class="case-card" data-case="farm">
+                    <div class="case-icon">🌾</div>
+                    <div class="case-name">Фарм кейс</div>
+                    <div class="case-price">1 ⭐</div>
+                    <div class="case-prizes">0.5 | 1 | 6 | 9 ⭐</div>
+                </div>
+                
+                <div class="case-card" data-case="lucky">
+                    <div class="case-icon">🍀</div>
+                    <div class="case-name">Счастливчик</div>
+                    <div class="case-price">5 ⭐</div>
+                    <div class="case-prizes">3 | 5 | 10 | 15 ⭐</div>
+                </div>
+                
+                <div class="case-card" data-case="confident">
+                    <div class="case-icon">💪</div>
+                    <div class="case-name">Уверенный</div>
+                    <div class="case-price">10 ⭐</div>
+                    <div class="case-prizes">7 | 10 | 15 | 30 ⭐</div>
+                </div>
+                
+                <div class="case-card" data-case="risky">
+                    <div class="case-icon">🔥</div>
+                    <div class="case-name">Рисковый</div>
+                    <div class="case-price">20 ⭐</div>
+                    <div class="case-prizes">15 | 20 | 30 | 80 ⭐</div>
+                </div>
+                
+                <div class="case-card daily" data-case="daily">
+                    <div class="case-icon">🎁</div>
+                    <div class="case-name">Ежедневный</div>
+                    <div class="case-price">Бесплатно</div>
+                    <div class="case-prizes">0 | 5 | 10 ⭐</div>
+                    <div id="daily-timer" class="daily-timer"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Экран открытия кейса -->
+        <div id="case-open" class="screen">
+            <div class="case-open-container">
+                <div class="case-3d">
+                    <div class="case-box">
+                        <div class="case-face front"></div>
+                        <div class="case-face back"></div>
+                        <div class="case-face left"></div>
+                        <div class="case-face right"></div>
+                        <div class="case-face top"></div>
+                        <div class="case-face bottom"></div>
+                        <div class="case-lid">
+                            <div class="lid-face front"></div>
+                            <div class="lid-face back"></div>
+                            <div class="lid-face left"></div>
+                            <div class="lid-face right"></div>
+                            <div class="lid-face top"></div>
+                        </div>
+                    </div>
+                    <div class="prize-glow"></div>
+                    <div id="prize-display" class="prize-display">
+                        <div class="prize-amount"></div>
+                        <div class="prize-stars">⭐</div>
+                    </div>
+                </div>
+                
+                <div class="particles" id="particles"></div>
+                
+                <div id="open-btn-container" class="open-btn-container">
+                    <button id="open-case-btn" class="open-case-btn">
+                        <span class="btn-text">ОТКРЫТЬ</span>
+                        <span class="btn-price"></span>
+                    </button>
+                </div>
+                
+                <div id="result-container" class="result-container hidden">
+                    <div class="result-text"></div>
+                    <button id="continue-btn" class="continue-btn">Продолжить</button>
+                    <button id="again-btn" class="again-btn">Открыть ещё</button>
+                </div>
+            </div>
+            
+            <button id="back-btn" class="back-btn">← Назад</button>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
+
