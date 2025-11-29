@@ -17,16 +17,20 @@ var userBalance = 0;
 var currentCase = null;
 var isOpening = false;
 
-// Запуск
+// Запуск - версия 2
 window.onload = function() {
-    console.log('App loaded!');
+    console.log('App v2 loaded!');
     
     // Получаем баланс из URL параметров (от бота)
     try {
         var urlParams = new URLSearchParams(window.location.search);
         var startParam = urlParams.get('start_param');
+        console.log('start_param:', startParam);
+        
         if (startParam) {
-            var params = JSON.parse(atob(startParam));
+            var decoded = atob(startParam);
+            console.log('decoded:', decoded);
+            var params = JSON.parse(decoded);
             userBalance = params.balance || 0;
             console.log('Balance from bot:', userBalance);
         }
@@ -34,16 +38,23 @@ window.onload = function() {
         console.log('Error parsing params:', e);
     }
     
-    // Убеждаемся что показывается меню кейсов
+    // ПРИНУДИТЕЛЬНО показываем меню кейсов
     var menu = document.getElementById('cases-menu');
     var openScreen = document.getElementById('case-open');
-    if (menu) {
-        menu.style.display = 'block';
-        menu.classList.add('active');
-    }
+    
+    console.log('menu:', menu);
+    console.log('openScreen:', openScreen);
+    
     if (openScreen) {
         openScreen.style.display = 'none';
+        openScreen.style.visibility = 'hidden';
         openScreen.classList.remove('active');
+    }
+    
+    if (menu) {
+        menu.style.display = 'block';
+        menu.style.visibility = 'visible';
+        menu.classList.add('active');
     }
     
     // Привязываем клики к карточкам
