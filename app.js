@@ -150,11 +150,13 @@ function showOpenScreen() {
     
     if (menu) {
         menu.style.display = 'none';
+        menu.style.visibility = 'hidden';
         menu.classList.remove('active');
     }
     
     if (openScreen) {
         openScreen.style.display = 'flex';
+        openScreen.style.visibility = 'visible';
         openScreen.classList.add('active');
     }
     
@@ -169,11 +171,13 @@ function goBack() {
     
     if (openScreen) {
         openScreen.style.display = 'none';
+        openScreen.style.visibility = 'hidden';
         openScreen.classList.remove('active');
     }
     
     if (menu) {
         menu.style.display = 'block';
+        menu.style.visibility = 'visible';
         menu.classList.add('active');
     }
     
