@@ -1,279 +1,159 @@
 // Telegram WebApp
-const tg = window.Telegram.WebApp;
+var tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
 // Конфигурация кейсов
-const CASES = {
-    farm: {
-        name: '🌾 Фарм кейс',
-        cost: 1,
-        prizes: [
-            { amount: 0.5, chance: 50 },
-            { amount: 1, chance: 30 },
-            { amount: 6, chance: 20 },
-            { amount: 9, chance: 10 }
-        ]
-    },
-    lucky: {
-        name: '🍀 Счастливчик',
-        cost: 5,
-        prizes: [
-            { amount: 3, chance: 50 },
-            { amount: 5, chance: 40 },
-            { amount: 10, chance: 30 },
-            { amount: 15, chance: 20 }
-        ]
-    },
-    confident: {
-        name: '💪 Уверенный',
-        cost: 10,
-        prizes: [
-            { amount: 7, chance: 50 },
-            { amount: 10, chance: 30 },
-            { amount: 15, chance: 20 },
-            { amount: 30, chance: 10 }
-        ]
-    },
-    risky: {
-        name: '🔥 Рисковый',
-        cost: 20,
-        prizes: [
-            { amount: 15, chance: 50 },
-            { amount: 20, chance: 30 },
-            { amount: 30, chance: 20 },
-            { amount: 80, chance: 10 }
-        ]
-    },
-    daily: {
-        name: '🎁 Ежедневный',
-        cost: 0,
-        prizes: [
-            { amount: 0, chance: 50 },
-            { amount: 5, chance: 40 },
-            { amount: 10, chance: 30 }
-        ]
-    }
+var CASES = {
+    farm: { name: '🌾 Фарм кейс', cost: 1, prizes: [0.5, 1, 6, 9] },
+    lucky: { name: '🍀 Счастливчик', cost: 5, prizes: [3, 5, 10, 15] },
+    confident: { name: '💪 Уверенный', cost: 10, prizes: [7, 10, 15, 30] },
+    risky: { name: '🔥 Рисковый', cost: 20, prizes: [15, 20, 30, 80] },
+    daily: { name: '🎁 Ежедневный', cost: 0, prizes: [0, 5, 10] }
 };
 
 // Состояние
-let userBalance = 0;
-let currentCase = null;
-let isOpening = false;
-let dailyCooldown = null;
+var userBalance = 100;
+var currentCase = null;
+var isOpening = false;
 
-// DOM элементы (инициализируются после загрузки)
-let casesMenu, caseOpenScreen, balanceDisplay, caseCards;
-let openCaseBtn, backBtn, continueBtn, againBtn;
-let caseBox, prizeDisplay, resultContainer, openBtnContainer, particles;
-
-// Ждём загрузки DOM
-document.addEventListener('DOMContentLoaded', function() {
-    init();
-});
-
-// Инициализация
-function init() {
-    // Получаем DOM элементы
-    casesMenu = document.getElementById('cases-menu');
-    caseOpenScreen = document.getElementById('case-open');
-    balanceDisplay = document.getElementById('user-balance');
-    caseCards = document.querySelectorAll('.case-card');
-    openCaseBtn = document.getElementById('open-case-btn');
-    backBtn = document.getElementById('back-btn');
-    continueBtn = document.getElementById('continue-btn');
-    againBtn = document.getElementById('again-btn');
-    caseBox = document.querySelector('.case-box');
-    prizeDisplay = document.getElementById('prize-display');
-    resultContainer = document.getElementById('result-container');
-    openBtnContainer = document.getElementById('open-btn-container');
-    particles = document.getElementById('particles');
+// Запуск
+window.onload = function() {
+    console.log('App loaded!');
     
-    // Получаем данные от бота
-    try {
-        // Пробуем получить баланс из URL параметров
-        const urlParams = new URLSearchParams(window.location.search);
-        const startParam = urlParams.get('start_param');
-        
-        if (startParam) {
-            const params = JSON.parse(atob(startParam));
-            userBalance = params.balance || 0;
-            dailyCooldown = params.daily_cooldown || null;
-        }
-        
-        // Или из Telegram initData
-        if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-            const params = JSON.parse(atob(tg.initDataUnsafe.start_param));
-            userBalance = params.balance || 0;
-            dailyCooldown = params.daily_cooldown || null;
-        }
-    } catch (e) {
-        console.log('Error parsing params:', e);
+    // Привязываем клики к карточкам
+    var cards = document.querySelectorAll('.case-card');
+    for (var i = 0; i < cards.length; i++) {
+        (function(card) {
+            card.onclick = function() {
+                var caseType = card.getAttribute('data-case');
+                console.log('Card clicked:', caseType);
+                selectCase(caseType);
+            };
+        })(cards[i]);
     }
     
-    // Для тестирования - если баланс 0, ставим тестовый
-    if (userBalance === 0) {
-        userBalance = 100;
-    }
-    
-    updateBalanceDisplay();
-    updateDailyTimer();
-    
-    // Обработчики кликов по кейсам (click + touchend для мобильных)
-    caseCards.forEach(card => {
-        const handler = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            selectCase(card.dataset.case);
+    // Кнопка открыть
+    var openBtn = document.getElementById('open-case-btn');
+    if (openBtn) {
+        openBtn.onclick = function() {
+            console.log('Open button clicked!');
+            startOpening();
         };
-        card.addEventListener('click', handler);
-        card.addEventListener('touchend', handler);
-    });
-    
-    // Кнопки
-    if (openCaseBtn) {
-        openCaseBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            openCase();
-        });
-        openCaseBtn.addEventListener('touchend', function(e) {
-            e.preventDefault();
-            openCase();
-        });
     }
     
+    // Кнопка назад
+    var backBtn = document.getElementById('back-btn');
     if (backBtn) {
-        backBtn.addEventListener('click', function(e) {
-            e.preventDefault();
+        backBtn.onclick = function() {
+            console.log('Back clicked');
             goBack();
-        });
-        backBtn.addEventListener('touchend', function(e) {
-            e.preventDefault();
-            goBack();
-        });
+        };
     }
     
+    // Кнопка продолжить
+    var continueBtn = document.getElementById('continue-btn');
     if (continueBtn) {
-        continueBtn.addEventListener('click', function(e) {
-            e.preventDefault();
+        continueBtn.onclick = function() {
             goBack();
-        });
-        continueBtn.addEventListener('touchend', function(e) {
-            e.preventDefault();
-            goBack();
-        });
+        };
     }
     
+    // Кнопка ещё
+    var againBtn = document.getElementById('again-btn');
     if (againBtn) {
-        againBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            resetCaseAnimation();
-            openCase();
-        });
-        againBtn.addEventListener('touchend', function(e) {
-            e.preventDefault();
-            resetCaseAnimation();
-            openCase();
-        });
+        againBtn.onclick = function() {
+            resetAnimation();
+            startOpening();
+        };
     }
     
-    // Применяем тему Telegram
-    applyTelegramTheme();
-    
-    console.log('Cases Mini App initialized!');
-}
+    updateBalance();
+};
 
-function applyTelegramTheme() {
-    if (tg.colorScheme === 'dark') {
-        document.body.style.background = tg.themeParams.bg_color || '#0f0f1a';
+function updateBalance() {
+    var el = document.getElementById('user-balance');
+    if (el) {
+        el.textContent = userBalance.toFixed(2) + ' ⭐';
     }
-}
-
-function updateBalanceDisplay() {
-    if (balanceDisplay) {
-        balanceDisplay.textContent = userBalance.toFixed(2) + ' ⭐';
-    }
-}
-
-function updateDailyTimer() {
-    const timerEl = document.getElementById('daily-timer');
-    const dailyCard = document.querySelector('.case-card.daily');
-    
-    if (!timerEl || !dailyCard) return;
-    
-    if (dailyCooldown) {
-        const now = Date.now();
-        const remaining = dailyCooldown - now;
-        
-        if (remaining > 0) {
-            const hours = Math.floor(remaining / (1000 * 60 * 60));
-            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-            timerEl.textContent = '⏰ Через ' + hours + 'ч ' + minutes + 'м';
-            dailyCard.style.opacity = '0.6';
-            return;
-        }
-    }
-    
-    timerEl.textContent = '✅ Доступен';
-    dailyCard.style.opacity = '1';
 }
 
 function selectCase(caseType) {
-    console.log('Selecting case:', caseType);
+    console.log('selectCase:', caseType);
     
     if (!CASES[caseType]) {
-        console.log('Case not found:', caseType);
+        alert('Кейс не найден: ' + caseType);
+        return;
+    }
+    
+    var caseData = CASES[caseType];
+    
+    // Проверяем баланс
+    if (caseType !== 'daily' && userBalance < caseData.cost) {
+        tg.showAlert('Недостаточно средств! Нужно ' + caseData.cost + ' ⭐');
         return;
     }
     
     currentCase = caseType;
-    const caseData = CASES[caseType];
     
-    // Проверяем доступность
-    if (caseType === 'daily' && dailyCooldown && dailyCooldown > Date.now()) {
-        tg.showAlert('Ежедневный кейс будет доступен позже!');
-        return;
-    }
-    
-    if (caseType !== 'daily' && userBalance < caseData.cost) {
-        tg.showAlert('Недостаточно средств!');
-        return;
-    }
-    
-    // Обновляем кнопку
-    const btnPrice = openCaseBtn.querySelector('.btn-price');
+    // Обновляем цену на кнопке
+    var btnPrice = document.querySelector('.btn-price');
     if (btnPrice) {
         btnPrice.textContent = caseType === 'daily' ? 'Бесплатно' : caseData.cost + ' ⭐';
     }
     
     // Показываем экран открытия
-    showScreen('case-open');
-    resetCaseAnimation();
+    showOpenScreen();
 }
 
-function showScreen(screenId) {
-    console.log('Showing screen:', screenId);
+function showOpenScreen() {
+    console.log('showOpenScreen');
     
-    document.querySelectorAll('.screen').forEach(function(s) {
-        s.classList.remove('active');
-        s.style.display = 'none';
-    });
+    var menu = document.getElementById('cases-menu');
+    var openScreen = document.getElementById('case-open');
     
-    const screen = document.getElementById(screenId);
-    if (screen) {
-        screen.classList.add('active');
-        screen.style.display = screenId === 'case-open' ? 'flex' : 'block';
+    if (menu) {
+        menu.style.display = 'none';
+        menu.classList.remove('active');
     }
+    
+    if (openScreen) {
+        openScreen.style.display = 'flex';
+        openScreen.classList.add('active');
+    }
+    
+    resetAnimation();
 }
 
 function goBack() {
-    console.log('Going back');
-    showScreen('cases-menu');
-    resetCaseAnimation();
+    console.log('goBack');
+    
+    var menu = document.getElementById('cases-menu');
+    var openScreen = document.getElementById('case-open');
+    
+    if (openScreen) {
+        openScreen.style.display = 'none';
+        openScreen.classList.remove('active');
+    }
+    
+    if (menu) {
+        menu.style.display = 'block';
+        menu.classList.add('active');
+    }
+    
     currentCase = null;
+    isOpening = false;
+    resetAnimation();
 }
 
-function resetCaseAnimation() {
+function resetAnimation() {
+    var caseBox = document.querySelector('.case-box');
+    var prizeDisplay = document.getElementById('prize-display');
+    var resultContainer = document.getElementById('result-container');
+    var openBtnContainer = document.getElementById('open-btn-container');
+    var openBtn = document.getElementById('open-case-btn');
+    var particles = document.getElementById('particles');
+    
     if (caseBox) {
         caseBox.classList.remove('opening', 'shaking');
     }
@@ -286,40 +166,30 @@ function resetCaseAnimation() {
     if (openBtnContainer) {
         openBtnContainer.style.display = 'block';
     }
+    if (openBtn) {
+        openBtn.disabled = false;
+    }
     if (particles) {
         particles.innerHTML = '';
     }
-    if (openCaseBtn) {
-        openCaseBtn.disabled = false;
-    }
+    
     isOpening = false;
 }
 
-function getRandomPrize(caseType) {
-    const prizes = CASES[caseType].prizes;
-    const sortedPrizes = prizes.slice().sort(function(a, b) {
-        return a.chance - b.chance;
-    });
-    const roll = Math.random() * 100;
+function startOpening() {
+    console.log('startOpening, currentCase:', currentCase, 'isOpening:', isOpening);
     
-    for (var i = 0; i < sortedPrizes.length; i++) {
-        if (roll <= sortedPrizes[i].chance) {
-            return sortedPrizes[i].amount;
-        }
-    }
-    
-    return prizes[0].amount;
-}
-
-async function openCase() {
-    console.log('Opening case:', currentCase, 'isOpening:', isOpening);
-    
-    if (isOpening || !currentCase) {
-        console.log('Cannot open - already opening or no case selected');
+    if (isOpening) {
+        console.log('Already opening!');
         return;
     }
     
-    const caseData = CASES[currentCase];
+    if (!currentCase) {
+        console.log('No case selected!');
+        return;
+    }
+    
+    var caseData = CASES[currentCase];
     
     // Проверяем баланс
     if (currentCase !== 'daily' && userBalance < caseData.cost) {
@@ -327,126 +197,148 @@ async function openCase() {
         return;
     }
     
-    // Проверяем cooldown для ежедневного
-    if (currentCase === 'daily' && dailyCooldown && dailyCooldown > Date.now()) {
-        tg.showAlert('Ежедневный кейс будет доступен позже!');
-        return;
-    }
-    
     isOpening = true;
-    if (openCaseBtn) openCaseBtn.disabled = true;
+    
+    var openBtn = document.getElementById('open-case-btn');
+    if (openBtn) openBtn.disabled = true;
     
     // Списываем стоимость
     if (currentCase !== 'daily') {
         userBalance -= caseData.cost;
-        updateBalanceDisplay();
-    } else {
-        // Устанавливаем cooldown на 24 часа
-        dailyCooldown = Date.now() + (24 * 60 * 60 * 1000);
+        updateBalance();
     }
     
-    // Анимация тряски
-    if (caseBox) caseBox.classList.add('shaking');
+    // Выбираем случайный приз
+    var prizes = caseData.prizes;
+    var prize = prizes[Math.floor(Math.random() * prizes.length)];
     
-    // Определяем приз
-    const prize = getRandomPrize(currentCase);
-    console.log('Prize:', prize);
+    console.log('Prize will be:', prize);
     
-    // Ждём и открываем
-    await sleep(1500);
-    
+    // Запускаем анимацию
+    var caseBox = document.querySelector('.case-box');
     if (caseBox) {
-        caseBox.classList.remove('shaking');
-        caseBox.classList.add('opening');
+        caseBox.classList.add('shaking');
     }
     
-    // Скрываем кнопку открытия
-    if (openBtnContainer) openBtnContainer.style.display = 'none';
-    
-    // Ждём открытия крышки
-    await sleep(800);
+    // Через 1.5 сек открываем
+    setTimeout(function() {
+        if (caseBox) {
+            caseBox.classList.remove('shaking');
+            caseBox.classList.add('opening');
+        }
+        
+        // Скрываем кнопку
+        var openBtnContainer = document.getElementById('open-btn-container');
+        if (openBtnContainer) {
+            openBtnContainer.style.display = 'none';
+        }
+        
+        // Через 0.8 сек показываем приз
+        setTimeout(function() {
+            showPrize(prize);
+        }, 800);
+        
+    }, 1500);
+}
+
+function showPrize(prize) {
+    console.log('showPrize:', prize);
     
     // Создаём частицы
     createParticles(prize > 0);
     
     // Показываем приз
+    var prizeDisplay = document.getElementById('prize-display');
+    var prizeAmount = document.querySelector('.prize-amount');
+    
+    if (prizeAmount) {
+        prizeAmount.textContent = prize > 0 ? '+' + prize : '0';
+    }
+    
     if (prizeDisplay) {
-        const prizeAmount = prizeDisplay.querySelector('.prize-amount');
-        if (prizeAmount) {
-            prizeAmount.textContent = prize > 0 ? '+' + prize : '0';
-        }
         prizeDisplay.classList.add('show');
     }
     
     // Начисляем приз
     if (prize > 0) {
         userBalance += prize;
-        updateBalanceDisplay();
+        updateBalance();
     }
     
-    // Показываем результат
-    await sleep(1500);
+    // Через 1.5 сек показываем результат
+    setTimeout(function() {
+        showResult(prize);
+    }, 1500);
+}
+
+function showResult(prize) {
+    console.log('showResult:', prize);
+    
+    var resultContainer = document.getElementById('result-container');
+    var resultText = document.querySelector('.result-text');
+    var againBtn = document.getElementById('again-btn');
+    
+    if (resultText) {
+        if (prize > 0) {
+            resultText.innerHTML = '🎉 Поздравляем! Вы выиграли <b>' + prize + ' ⭐</b>';
+        } else {
+            resultText.innerHTML = '😔 В этот раз не повезло...';
+        }
+    }
     
     if (resultContainer) {
-        const resultText = resultContainer.querySelector('.result-text');
-        if (resultText) {
-            if (prize > 0) {
-                resultText.innerHTML = '🎉 Поздравляем! Вы выиграли <b>' + prize + ' ⭐</b>';
-            } else {
-                resultText.innerHTML = '😔 В этот раз не повезло...';
-            }
-        }
         resultContainer.classList.remove('hidden');
     }
     
     // Проверяем можно ли открыть ещё
-    if (againBtn) {
-        const canOpenAgain = currentCase === 'daily' ? false : userBalance >= caseData.cost;
+    if (againBtn && currentCase) {
+        var caseData = CASES[currentCase];
+        var canOpenAgain = currentCase !== 'daily' && userBalance >= caseData.cost;
         againBtn.style.display = canOpenAgain ? 'block' : 'none';
     }
     
     isOpening = false;
-    if (openCaseBtn) openCaseBtn.disabled = false;
     
     // Отправляем результат боту
-    sendResultToBot(currentCase, prize);
+    sendToBot(currentCase, prize);
 }
 
 function createParticles(isWin) {
+    var particles = document.getElementById('particles');
     if (!particles) return;
     
-    const colors = isWin 
+    var colors = isWin 
         ? ['#ffd700', '#ffec8b', '#ff6b6b', '#e94560', '#00ff88'] 
         : ['#555', '#666', '#777'];
     
     for (var i = 0; i < 30; i++) {
-        const particle = document.createElement('div');
+        var particle = document.createElement('div');
         particle.className = 'particle';
         particle.style.background = colors[Math.floor(Math.random() * colors.length)];
         particle.style.left = '50%';
         particle.style.top = '40%';
         
-        const angle = (Math.random() * 360) * (Math.PI / 180);
-        const distance = 100 + Math.random() * 150;
-        const tx = Math.cos(angle) * distance;
-        const ty = Math.sin(angle) * distance;
+        var angle = (Math.random() * 360) * (Math.PI / 180);
+        var distance = 100 + Math.random() * 150;
+        var tx = Math.cos(angle) * distance;
+        var ty = Math.sin(angle) * distance;
         
         particle.style.setProperty('--tx', tx + 'px');
         particle.style.setProperty('--ty', ty + 'px');
         
         particles.appendChild(particle);
-        
-        setTimeout(function() {
-            if (particle.parentNode) {
-                particle.parentNode.removeChild(particle);
-            }
-        }, 1500);
     }
+    
+    // Удаляем частицы через 2 сек
+    setTimeout(function() {
+        if (particles) {
+            particles.innerHTML = '';
+        }
+    }, 2000);
 }
 
-function sendResultToBot(caseType, prize) {
-    // Отправляем данные боту
-    const data = {
+function sendToBot(caseType, prize) {
+    var data = {
         action: 'case_opened',
         case_type: caseType,
         prize: prize,
@@ -455,14 +347,8 @@ function sendResultToBot(caseType, prize) {
     
     try {
         tg.sendData(JSON.stringify(data));
-        console.log('Data sent to bot:', data);
+        console.log('Sent to bot:', data);
     } catch (e) {
-        console.log('Error sending data:', e);
+        console.log('Error sending:', e);
     }
-}
-
-function sleep(ms) {
-    return new Promise(function(resolve) {
-        setTimeout(resolve, ms);
-    });
 }

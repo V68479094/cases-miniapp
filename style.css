@@ -33,16 +33,20 @@ body {
 
 /* Screens */
 .screen {
-    display: none !important;
+    display: none;
     animation: fadeIn 0.3s ease;
 }
 
 .screen.active {
-    display: block !important;
+    display: block;
+}
+
+#case-open {
+    display: none;
 }
 
 #case-open.active {
-    display: flex !important;
+    display: flex;
 }
 
 @keyframes fadeIn {
