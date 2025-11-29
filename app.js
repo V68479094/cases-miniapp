@@ -16,6 +16,7 @@ var CASES = {
 var userBalance = 0;
 var currentCase = null;
 var isOpening = false;
+var operations = []; // Массив всех операций для отправки боту
 
 // Запуск - версия 2
 window.onload = function() {
@@ -80,11 +81,11 @@ window.onload = function() {
         };
     }
     
-    // Кнопка продолжить
+    // Кнопка продолжить - закрывает Mini App и отправляет данные боту
     var continueBtn = document.getElementById('continue-btn');
     if (continueBtn) {
         continueBtn.onclick = function() {
-            goBack();
+            sendAndClose();
         };
     }
     
@@ -119,7 +120,7 @@ function selectCase(caseType) {
     
     // Проверяем баланс
     if (caseType !== 'daily' && userBalance < caseData.cost) {
-        tg.showAlert('Недостаточно средств! Нужно ' + caseData.cost + ' ⭐');
+        alert('Недостаточно средств! Нужно ' + caseData.cost + ' ⭐');
         return;
     }
     
@@ -218,7 +219,7 @@ function startOpening() {
     
     // Проверяем баланс
     if (currentCase !== 'daily' && userBalance < caseData.cost) {
-        tg.showAlert('Недостаточно средств!');
+        alert('Недостаточно средств!');
         return;
     }
     
@@ -299,9 +300,19 @@ function showPrize(prize) {
 function showResult(prize) {
     console.log('showResult:', prize);
     
+    // Добавляем операцию в массив
+    var caseData = CASES[currentCase];
+    operations.push({
+        case_type: currentCase,
+        cost: currentCase === 'daily' ? 0 : caseData.cost,
+        prize: prize
+    });
+    console.log('Operations:', operations);
+    
     var resultContainer = document.getElementById('result-container');
     var resultText = document.querySelector('.result-text');
     var againBtn = document.getElementById('again-btn');
+    var continueBtn = document.getElementById('continue-btn');
     
     if (resultText) {
         if (prize > 0) {
@@ -317,15 +328,38 @@ function showResult(prize) {
     
     // Проверяем можно ли открыть ещё
     if (againBtn && currentCase) {
-        var caseData = CASES[currentCase];
         var canOpenAgain = currentCase !== 'daily' && userBalance >= caseData.cost;
         againBtn.style.display = canOpenAgain ? 'block' : 'none';
     }
     
-    isOpening = false;
+    // Меняем текст кнопки
+    if (continueBtn) {
+        continueBtn.textContent = 'Закрыть (' + operations.length + ' откр.)';
+    }
     
-    // Отправляем результат боту
-    sendToBot(currentCase, prize);
+    isOpening = false;
+}
+
+function sendAndClose() {
+    console.log('sendAndClose, operations:', operations);
+    
+    // Отправляем все операции боту и закрываем Mini App
+    if (operations.length > 0) {
+        var data = {
+            action: 'cases_batch',
+            operations: operations
+        };
+        
+        try {
+            tg.sendData(JSON.stringify(data));
+            console.log('Sent batch to bot and closing:', data);
+        } catch (e) {
+            console.log('Error sending:', e);
+            tg.close();
+        }
+    } else {
+        tg.close();
+    }
 }
 
 function createParticles(isWin) {
@@ -362,18 +396,3 @@ function createParticles(isWin) {
     }, 2000);
 }
 
-function sendToBot(caseType, prize) {
-    var data = {
-        action: 'case_opened',
-        case_type: caseType,
-        prize: prize,
-        new_balance: userBalance
-    };
-    
-    try {
-        tg.sendData(JSON.stringify(data));
-        console.log('Sent to bot:', data);
-    } catch (e) {
-        console.log('Error sending:', e);
-    }
-}
