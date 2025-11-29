@@ -42,19 +42,12 @@ window.onload = function() {
     var menu = document.getElementById('cases-menu');
     var openScreen = document.getElementById('case-open');
     
-    console.log('menu:', menu);
-    console.log('openScreen:', openScreen);
-    
     if (openScreen) {
         openScreen.style.display = 'none';
-        openScreen.style.visibility = 'hidden';
-        openScreen.classList.remove('active');
     }
     
     if (menu) {
         menu.style.display = 'block';
-        menu.style.visibility = 'visible';
-        menu.classList.add('active');
     }
     
     // Привязываем клики к карточкам
@@ -150,14 +143,10 @@ function showOpenScreen() {
     
     if (menu) {
         menu.style.display = 'none';
-        menu.style.visibility = 'hidden';
-        menu.classList.remove('active');
     }
     
     if (openScreen) {
         openScreen.style.display = 'flex';
-        openScreen.style.visibility = 'visible';
-        openScreen.classList.add('active');
     }
     
     resetAnimation();
@@ -171,14 +160,10 @@ function goBack() {
     
     if (openScreen) {
         openScreen.style.display = 'none';
-        openScreen.style.visibility = 'hidden';
-        openScreen.classList.remove('active');
     }
     
     if (menu) {
         menu.style.display = 'block';
-        menu.style.visibility = 'visible';
-        menu.classList.add('active');
     }
     
     currentCase = null;
