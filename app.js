@@ -62,58 +62,125 @@ let currentCase = null;
 let isOpening = false;
 let dailyCooldown = null;
 
-// DOM элементы
-const casesMenu = document.getElementById('cases-menu');
-const caseOpenScreen = document.getElementById('case-open');
-const balanceDisplay = document.getElementById('user-balance');
-const caseCards = document.querySelectorAll('.case-card');
-const openCaseBtn = document.getElementById('open-case-btn');
-const backBtn = document.getElementById('back-btn');
-const continueBtn = document.getElementById('continue-btn');
-const againBtn = document.getElementById('again-btn');
-const caseBox = document.querySelector('.case-box');
-const prizeDisplay = document.getElementById('prize-display');
-const resultContainer = document.getElementById('result-container');
-const openBtnContainer = document.getElementById('open-btn-container');
-const particles = document.getElementById('particles');
+// DOM элементы (инициализируются после загрузки)
+let casesMenu, caseOpenScreen, balanceDisplay, caseCards;
+let openCaseBtn, backBtn, continueBtn, againBtn;
+let caseBox, prizeDisplay, resultContainer, openBtnContainer, particles;
+
+// Ждём загрузки DOM
+document.addEventListener('DOMContentLoaded', function() {
+    init();
+});
 
 // Инициализация
 function init() {
-    // Получаем данные от бота
-    const initData = tg.initDataUnsafe;
+    // Получаем DOM элементы
+    casesMenu = document.getElementById('cases-menu');
+    caseOpenScreen = document.getElementById('case-open');
+    balanceDisplay = document.getElementById('user-balance');
+    caseCards = document.querySelectorAll('.case-card');
+    openCaseBtn = document.getElementById('open-case-btn');
+    backBtn = document.getElementById('back-btn');
+    continueBtn = document.getElementById('continue-btn');
+    againBtn = document.getElementById('again-btn');
+    caseBox = document.querySelector('.case-box');
+    prizeDisplay = document.getElementById('prize-display');
+    resultContainer = document.getElementById('result-container');
+    openBtnContainer = document.getElementById('open-btn-container');
+    particles = document.getElementById('particles');
     
-    // Пробуем получить баланс из start_param
-    if (tg.initDataUnsafe.start_param) {
-        try {
+    // Получаем данные от бота
+    try {
+        // Пробуем получить баланс из URL параметров
+        const urlParams = new URLSearchParams(window.location.search);
+        const startParam = urlParams.get('start_param');
+        
+        if (startParam) {
+            const params = JSON.parse(atob(startParam));
+            userBalance = params.balance || 0;
+            dailyCooldown = params.daily_cooldown || null;
+        }
+        
+        // Или из Telegram initData
+        if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
             const params = JSON.parse(atob(tg.initDataUnsafe.start_param));
             userBalance = params.balance || 0;
             dailyCooldown = params.daily_cooldown || null;
-        } catch (e) {
-            console.log('Error parsing start_param:', e);
         }
+    } catch (e) {
+        console.log('Error parsing params:', e);
     }
     
-    // Для тестирования - можно задать баланс вручную
+    // Для тестирования - если баланс 0, ставим тестовый
     if (userBalance === 0) {
-        userBalance = 100; // Тестовый баланс
+        userBalance = 100;
     }
     
     updateBalanceDisplay();
     updateDailyTimer();
     
-    // Обработчики кликов по кейсам
+    // Обработчики кликов по кейсам (click + touchend для мобильных)
     caseCards.forEach(card => {
-        card.addEventListener('click', () => selectCase(card.dataset.case));
+        const handler = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            selectCase(card.dataset.case);
+        };
+        card.addEventListener('click', handler);
+        card.addEventListener('touchend', handler);
     });
     
     // Кнопки
-    openCaseBtn.addEventListener('click', openCase);
-    backBtn.addEventListener('click', goBack);
-    continueBtn.addEventListener('click', goBack);
-    againBtn.addEventListener('click', () => openCase());
+    if (openCaseBtn) {
+        openCaseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            openCase();
+        });
+        openCaseBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            openCase();
+        });
+    }
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            goBack();
+        });
+        backBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            goBack();
+        });
+    }
+    
+    if (continueBtn) {
+        continueBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            goBack();
+        });
+        continueBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            goBack();
+        });
+    }
+    
+    if (againBtn) {
+        againBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            resetCaseAnimation();
+            openCase();
+        });
+        againBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            resetCaseAnimation();
+            openCase();
+        });
+    }
     
     // Применяем тему Telegram
     applyTelegramTheme();
+    
+    console.log('Cases Mini App initialized!');
 }
 
 function applyTelegramTheme() {
@@ -123,12 +190,16 @@ function applyTelegramTheme() {
 }
 
 function updateBalanceDisplay() {
-    balanceDisplay.textContent = `${userBalance.toFixed(2)} ⭐`;
+    if (balanceDisplay) {
+        balanceDisplay.textContent = userBalance.toFixed(2) + ' ⭐';
+    }
 }
 
 function updateDailyTimer() {
     const timerEl = document.getElementById('daily-timer');
     const dailyCard = document.querySelector('.case-card.daily');
+    
+    if (!timerEl || !dailyCard) return;
     
     if (dailyCooldown) {
         const now = Date.now();
@@ -137,7 +208,7 @@ function updateDailyTimer() {
         if (remaining > 0) {
             const hours = Math.floor(remaining / (1000 * 60 * 60));
             const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-            timerEl.textContent = `⏰ Через ${hours}ч ${minutes}м`;
+            timerEl.textContent = '⏰ Через ' + hours + 'ч ' + minutes + 'м';
             dailyCard.style.opacity = '0.6';
             return;
         }
@@ -148,7 +219,12 @@ function updateDailyTimer() {
 }
 
 function selectCase(caseType) {
-    if (!CASES[caseType]) return;
+    console.log('Selecting case:', caseType);
+    
+    if (!CASES[caseType]) {
+        console.log('Case not found:', caseType);
+        return;
+    }
     
     currentCase = caseType;
     const caseData = CASES[caseType];
@@ -166,7 +242,9 @@ function selectCase(caseType) {
     
     // Обновляем кнопку
     const btnPrice = openCaseBtn.querySelector('.btn-price');
-    btnPrice.textContent = caseType === 'daily' ? 'Бесплатно' : `${caseData.cost} ⭐`;
+    if (btnPrice) {
+        btnPrice.textContent = caseType === 'daily' ? 'Бесплатно' : caseData.cost + ' ⭐';
+    }
     
     // Показываем экран открытия
     showScreen('case-open');
@@ -174,32 +252,59 @@ function selectCase(caseType) {
 }
 
 function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(screenId).classList.add('active');
+    console.log('Showing screen:', screenId);
+    
+    document.querySelectorAll('.screen').forEach(function(s) {
+        s.classList.remove('active');
+        s.style.display = 'none';
+    });
+    
+    const screen = document.getElementById(screenId);
+    if (screen) {
+        screen.classList.add('active');
+        screen.style.display = screenId === 'case-open' ? 'flex' : 'block';
+    }
 }
 
 function goBack() {
+    console.log('Going back');
     showScreen('cases-menu');
     resetCaseAnimation();
+    currentCase = null;
 }
 
 function resetCaseAnimation() {
-    caseBox.classList.remove('opening', 'shaking');
-    prizeDisplay.classList.remove('show');
-    resultContainer.classList.add('hidden');
-    openBtnContainer.style.display = 'block';
-    particles.innerHTML = '';
+    if (caseBox) {
+        caseBox.classList.remove('opening', 'shaking');
+    }
+    if (prizeDisplay) {
+        prizeDisplay.classList.remove('show');
+    }
+    if (resultContainer) {
+        resultContainer.classList.add('hidden');
+    }
+    if (openBtnContainer) {
+        openBtnContainer.style.display = 'block';
+    }
+    if (particles) {
+        particles.innerHTML = '';
+    }
+    if (openCaseBtn) {
+        openCaseBtn.disabled = false;
+    }
     isOpening = false;
 }
 
 function getRandomPrize(caseType) {
     const prizes = CASES[caseType].prizes;
-    const sortedPrizes = [...prizes].sort((a, b) => a.chance - b.chance);
+    const sortedPrizes = prizes.slice().sort(function(a, b) {
+        return a.chance - b.chance;
+    });
     const roll = Math.random() * 100;
     
-    for (const prize of sortedPrizes) {
-        if (roll <= prize.chance) {
-            return prize.amount;
+    for (var i = 0; i < sortedPrizes.length; i++) {
+        if (roll <= sortedPrizes[i].chance) {
+            return sortedPrizes[i].amount;
         }
     }
     
@@ -207,7 +312,12 @@ function getRandomPrize(caseType) {
 }
 
 async function openCase() {
-    if (isOpening || !currentCase) return;
+    console.log('Opening case:', currentCase, 'isOpening:', isOpening);
+    
+    if (isOpening || !currentCase) {
+        console.log('Cannot open - already opening or no case selected');
+        return;
+    }
     
     const caseData = CASES[currentCase];
     
@@ -224,7 +334,7 @@ async function openCase() {
     }
     
     isOpening = true;
-    openCaseBtn.disabled = true;
+    if (openCaseBtn) openCaseBtn.disabled = true;
     
     // Списываем стоимость
     if (currentCase !== 'daily') {
@@ -236,19 +346,22 @@ async function openCase() {
     }
     
     // Анимация тряски
-    caseBox.classList.add('shaking');
+    if (caseBox) caseBox.classList.add('shaking');
     
     // Определяем приз
     const prize = getRandomPrize(currentCase);
+    console.log('Prize:', prize);
     
     // Ждём и открываем
     await sleep(1500);
     
-    caseBox.classList.remove('shaking');
-    caseBox.classList.add('opening');
+    if (caseBox) {
+        caseBox.classList.remove('shaking');
+        caseBox.classList.add('opening');
+    }
     
     // Скрываем кнопку открытия
-    openBtnContainer.style.display = 'none';
+    if (openBtnContainer) openBtnContainer.style.display = 'none';
     
     // Ждём открытия крышки
     await sleep(800);
@@ -257,9 +370,13 @@ async function openCase() {
     createParticles(prize > 0);
     
     // Показываем приз
-    const prizeAmount = prizeDisplay.querySelector('.prize-amount');
-    prizeAmount.textContent = prize > 0 ? `+${prize}` : '0';
-    prizeDisplay.classList.add('show');
+    if (prizeDisplay) {
+        const prizeAmount = prizeDisplay.querySelector('.prize-amount');
+        if (prizeAmount) {
+            prizeAmount.textContent = prize > 0 ? '+' + prize : '0';
+        }
+        prizeDisplay.classList.add('show');
+    }
     
     // Начисляем приз
     if (prize > 0) {
@@ -270,32 +387,39 @@ async function openCase() {
     // Показываем результат
     await sleep(1500);
     
-    const resultText = resultContainer.querySelector('.result-text');
-    if (prize > 0) {
-        resultText.innerHTML = `🎉 Поздравляем! Вы выиграли <b>${prize} ⭐</b>`;
-    } else {
-        resultText.innerHTML = '😔 В этот раз не повезло...';
+    if (resultContainer) {
+        const resultText = resultContainer.querySelector('.result-text');
+        if (resultText) {
+            if (prize > 0) {
+                resultText.innerHTML = '🎉 Поздравляем! Вы выиграли <b>' + prize + ' ⭐</b>';
+            } else {
+                resultText.innerHTML = '😔 В этот раз не повезло...';
+            }
+        }
+        resultContainer.classList.remove('hidden');
     }
     
-    resultContainer.classList.remove('hidden');
-    
     // Проверяем можно ли открыть ещё
-    const canOpenAgain = currentCase === 'daily' ? false : userBalance >= caseData.cost;
-    againBtn.style.display = canOpenAgain ? 'block' : 'none';
+    if (againBtn) {
+        const canOpenAgain = currentCase === 'daily' ? false : userBalance >= caseData.cost;
+        againBtn.style.display = canOpenAgain ? 'block' : 'none';
+    }
     
     isOpening = false;
-    openCaseBtn.disabled = false;
+    if (openCaseBtn) openCaseBtn.disabled = false;
     
     // Отправляем результат боту
     sendResultToBot(currentCase, prize);
 }
 
 function createParticles(isWin) {
+    if (!particles) return;
+    
     const colors = isWin 
         ? ['#ffd700', '#ffec8b', '#ff6b6b', '#e94560', '#00ff88'] 
         : ['#555', '#666', '#777'];
     
-    for (let i = 0; i < 30; i++) {
+    for (var i = 0; i < 30; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.style.background = colors[Math.floor(Math.random() * colors.length)];
@@ -307,12 +431,16 @@ function createParticles(isWin) {
         const tx = Math.cos(angle) * distance;
         const ty = Math.sin(angle) * distance;
         
-        particle.style.setProperty('--tx', `${tx}px`);
-        particle.style.setProperty('--ty', `${ty}px`);
+        particle.style.setProperty('--tx', tx + 'px');
+        particle.style.setProperty('--ty', ty + 'px');
         
         particles.appendChild(particle);
         
-        setTimeout(() => particle.remove(), 1500);
+        setTimeout(function() {
+            if (particle.parentNode) {
+                particle.parentNode.removeChild(particle);
+            }
+        }, 1500);
     }
 }
 
@@ -325,13 +453,16 @@ function sendResultToBot(caseType, prize) {
         new_balance: userBalance
     };
     
-    tg.sendData(JSON.stringify(data));
+    try {
+        tg.sendData(JSON.stringify(data));
+        console.log('Data sent to bot:', data);
+    } catch (e) {
+        console.log('Error sending data:', e);
+    }
 }
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(function(resolve) {
+        setTimeout(resolve, ms);
+    });
 }
-
-// Запуск
-init();
-
